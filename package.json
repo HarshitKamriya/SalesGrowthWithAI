@@ -1,0 +1,28 @@
+{
+  "name": "ai-commerce-growth-agent-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Commerce + Growth Agent platform built for Razorpay Buildathon 2026",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "seed:mongo": "npm run seed --workspace=apps/api",
+    "seed:neo4j": "npm run seed:neo4j --workspace=apps/api"
+  },
+  "devDependencies": {
+    "@esbuild/win32-x64": "^0.28.2",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
