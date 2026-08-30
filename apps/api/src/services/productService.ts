@@ -1,5 +1,6 @@
 import { Product } from '@ai-commerce/shared';
 import { getMongoDb, getInMemoryStore } from '../config/db.js';
+import { generate100Products } from '../database/seedMongo.js';
 
 export async function searchProductsService(params: {
   query?: string;
@@ -14,6 +15,12 @@ export async function searchProductsService(params: {
   const db = getMongoDb();
   const memoryStore = getInMemoryStore();
   const limit = params.limit || 20;
+
+  // Auto-seed in-memory store if empty
+  if (memoryStore.products.size === 0) {
+    const defaultProds = generate100Products();
+    defaultProds.forEach(p => memoryStore.products.set(p.productId, p));
+  }
 
   if (db) {
     try {
@@ -42,13 +49,15 @@ export async function searchProductsService(params: {
         .limit(limit)
         .toArray() as unknown as Product[];
 
-      return { products, total };
+      if (total > 0 && products.length > 0) {
+        return { products, total };
+      }
     } catch (err) {
       console.warn('MongoDB query warning, using in-memory filter fallback:', err);
     }
   }
 
-  // In-Memory Fallback Filter
+  // In-Memory Fallback Filter (Guaranteed 100 products)
   let filtered = Array.from(memoryStore.products.values());
 
   if (params.category) {
@@ -72,7 +81,7 @@ export async function searchProductsService(params: {
       p.name.toLowerCase().includes(q) ||
       p.description.toLowerCase().includes(q) ||
       p.category.toLowerCase().includes(q) ||
-      p.tags.some(t => t.toLowerCase().includes(q))
+      p.tags.some((t: string) => t.toLowerCase().includes(q))
     );
   }
 
@@ -84,6 +93,11 @@ export async function searchProductsService(params: {
 export async function getProductByIdService(productId: string): Promise<Product | null> {
   const db = getMongoDb();
   const memoryStore = getInMemoryStore();
+
+  if (memoryStore.products.size === 0) {
+    const defaultProds = generate100Products();
+    defaultProds.forEach(p => memoryStore.products.set(p.productId, p));
+  }
 
   if (db) {
     try {

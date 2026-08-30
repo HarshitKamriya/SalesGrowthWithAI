@@ -17,6 +17,7 @@ interface CartContextType {
   subtotal: number;
   itemCount: number;
   addToCart: (productId: string, quantity?: number) => Promise<void>;
+  updateQuantity: (productId: string, newQuantity: number) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -27,6 +28,10 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [subtotal, setSubtotal] = useState<number>(0);
+
+  const recalcSubtotal = (cartItems: CartItem[]): number => {
+    return cartItems.reduce((sum, i) => sum + i.selectedPrice * i.quantity, 0);
+  };
 
   const refreshCart = async () => {
     try {
@@ -53,10 +58,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Local fallback item addition
       setItems(prev => {
         const existing = prev.find(i => i.productId === productId);
+        let updated: CartItem[];
         if (existing) {
-          return prev.map(i => i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i);
+          updated = prev.map(i => i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i);
+        } else {
+          updated = [...prev, { productId, quantity, selectedPrice: 1299, productDetails: { name: productId } }];
         }
-        return [...prev, { productId, quantity, selectedPrice: 1299, productDetails: { name: productId } }];
+        setSubtotal(recalcSubtotal(updated));
+        return updated;
+      });
+    }
+  };
+
+  const updateQuantity = async (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      return removeFromCart(productId);
+    }
+    try {
+      // Remove and re-add with correct quantity (API doesn't have PATCH)
+      await api.delete(`/cart/items/${productId}`);
+      const res = await api.post('/cart/items', { productId, quantity: newQuantity });
+      if (res.data.success && res.data.data.cart) {
+        setItems(res.data.data.cart.items || []);
+        setSubtotal(res.data.data.cart.subtotal || 0);
+      }
+    } catch {
+      // Local fallback
+      setItems(prev => {
+        const updated = prev.map(i =>
+          i.productId === productId ? { ...i, quantity: newQuantity } : i
+        );
+        setSubtotal(recalcSubtotal(updated));
+        return updated;
       });
     }
   };
@@ -69,7 +102,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSubtotal(res.data.data.cart.subtotal || 0);
       }
     } catch {
-      setItems(prev => prev.filter(i => i.productId !== productId));
+      setItems(prev => {
+        const updated = prev.filter(i => i.productId !== productId);
+        setSubtotal(recalcSubtotal(updated));
+        return updated;
+      });
     }
   };
 
@@ -84,7 +121,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, subtotal, itemCount, addToCart, removeFromCart, clearCart, refreshCart }}>
+    <CartContext.Provider value={{ items, subtotal, itemCount, addToCart, updateQuantity, removeFromCart, clearCart, refreshCart }}>
       {children}
     </CartContext.Provider>
   );

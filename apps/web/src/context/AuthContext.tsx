@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
 interface User {
@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
   switchRole: (role: 'CUSTOMER' | 'MERCHANT') => void;
+  onRoleSwitch: (callback: (role: 'CUSTOMER' | 'MERCHANT') => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: 'CUSTOMER'
   });
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [roleSwitchCallback, setRoleSwitchCallback] = useState<((role: 'CUSTOMER' | 'MERCHANT') => void) | null>(null);
 
   const login = async (email: string, password = 'password123') => {
     try {
@@ -54,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
   };
 
-  const switchRole = (role: 'CUSTOMER' | 'MERCHANT') => {
+  const switchRole = useCallback((role: 'CUSTOMER' | 'MERCHANT') => {
     if (role === 'MERCHANT') {
       setUser({
         userId: 'merch_demo_1',
@@ -70,10 +72,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: 'CUSTOMER'
       });
     }
-  };
+    // Trigger navigation callback
+    if (roleSwitchCallback) {
+      roleSwitchCallback(role);
+    }
+  }, [roleSwitchCallback]);
+
+  const onRoleSwitch = useCallback((callback: (role: 'CUSTOMER' | 'MERCHANT') => void) => {
+    setRoleSwitchCallback(() => callback);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, token, login, logout, switchRole, onRoleSwitch }}>
       {children}
     </AuthContext.Provider>
   );

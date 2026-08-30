@@ -48,10 +48,12 @@ export class GeminiAgentProvider implements ILlmProvider {
     if (msgLower.includes('laptop') || msgLower.includes('machine learning') || msgLower.includes('coding') || msgLower.includes('under') || msgLower.includes('find') || msgLower.includes('search')) {
       // 1. Parse constraints
       let maxPrice: number | undefined = undefined;
-      const budgetMatch = msgLower.match(/(?:under|below|budget|upto|within)\s*(?:₹|rs\.?|inr)?\s*([\d,]+)k?/i);
+      const budgetMatch = msgLower.match(/(?:under|below|budget|upto|within)\s*(?:₹|rs\.?|inr)?\s*([\d,]+)\s*(k|lakh|l)?/i);
       if (budgetMatch) {
         let val = parseInt(budgetMatch[1].replace(/,/g, ''), 10);
-        if (msgLower.includes('k') && val < 1000) val *= 1000;
+        const suffix = (budgetMatch[2] || '').toLowerCase();
+        if (suffix === 'k' && val < 1000) val *= 1000;
+        else if (suffix === 'l' || suffix === 'lakh') val *= 100000;
         maxPrice = val;
       }
 
@@ -77,7 +79,25 @@ export class GeminiAgentProvider implements ILlmProvider {
       // 2. Add to Cart & Calculate Upsell
       let targetProdId = 'prod_laptop_8';
       const prodMatch = msgLower.match(/prod_[a-z0-9_]+/i);
-      if (prodMatch) targetProdId = prodMatch[0];
+      if (prodMatch) {
+        targetProdId = prodMatch[0];
+      } else {
+        // Try to infer product from name mentions
+        const nameMap: Record<string, string> = {
+          'tuf': 'prod_laptop_8', 'asus': 'prod_laptop_8',
+          'macbook': 'prod_laptop_1', 'mac': 'prod_laptop_1',
+          'thinkpad': 'prod_laptop_3', 'lenovo': 'prod_laptop_3',
+          'dell': 'prod_laptop_4', 'xps': 'prod_laptop_4',
+          'hp': 'prod_laptop_5', 'spectre': 'prod_laptop_5',
+          'hub': 'prod_hub_1', 'usb': 'prod_hub_1', 'anker': 'prod_hub_1',
+          'bag': 'prod_bag_1', 'backpack': 'prod_bag_1', 'peak design': 'prod_bag_1',
+          'mouse': 'prod_mouse_1', 'logitech': 'prod_mouse_1', 'mx master': 'prod_mouse_1',
+          'keyboard': 'prod_keyboard_1', 'keychron': 'prod_keyboard_1'
+        };
+        for (const [keyword, prodId] of Object.entries(nameMap)) {
+          if (msgLower.includes(keyword)) { targetProdId = prodId; break; }
+        }
+      }
 
       const addRes = await agentTools.add_to_cart.execute({ productId: targetProdId, quantity: 1 }, context);
       toolCallsExecuted.push({ tool: 'add_to_cart', input: { productId: targetProdId }, output: addRes });

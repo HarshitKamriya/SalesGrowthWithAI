@@ -4,15 +4,11 @@ import { env } from '../config/env.js';
 import { getOrderByIdService, updateOrderPaymentStatusService } from './orderService.js';
 import { getInMemoryStore } from '../config/db.js';
 
-let razorpayClient: Razorpay | null = null;
-
-try {
-  razorpayClient = new Razorpay({
+function getRazorpayClient(): Razorpay {
+  return new Razorpay({
     key_id: env.RAZORPAY_KEY_ID,
     key_secret: env.RAZORPAY_KEY_SECRET
   });
-} catch {
-  razorpayClient = null;
 }
 
 export async function createRazorpayOrderService(orderId: string): Promise<{
@@ -29,23 +25,36 @@ export async function createRazorpayOrderService(orderId: string): Promise<{
   const amountInPaise = Math.round(order.totalAmount * 100);
   const currency = 'INR';
 
-  let razorpayOrderId = `rzp_order_mock_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  // Validation: Minimum amount 100 paise (₹1)
+  if (amountInPaise < 100) {
+    throw {
+      statusCode: 400,
+      code: 'INVALID_AMOUNT',
+      message: 'Minimum order amount must be at least 100 paise (₹1).'
+    };
+  }
 
-  if (razorpayClient && env.RAZORPAY_KEY_ID !== 'rzp_test_placeholder_key_id') {
-    try {
-      const rzpOrder = await razorpayClient.orders.create({
-        amount: amountInPaise,
-        currency,
-        receipt: orderId,
-        notes: {
-          customerId: order.customerId,
-          merchantId: order.merchantId
-        }
-      });
-      razorpayOrderId = rzpOrder.id;
-    } catch (err) {
-      console.warn('Razorpay live test mode order creation fallback to mock order ID:', err);
-    }
+  let razorpayOrderId: string;
+
+  try {
+    const razorpay = getRazorpayClient();
+    const rzpOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency,
+      receipt: orderId,
+      notes: {
+        customerId: order.customerId,
+        merchantId: order.merchantId
+      }
+    });
+    razorpayOrderId = rzpOrder.id;
+  } catch (err: any) {
+    console.error('Razorpay Order Creation API Error:', err);
+    throw {
+      statusCode: 500,
+      code: 'RAZORPAY_API_ERROR',
+      message: err.error?.description || err.message || 'Failed to create Razorpay Order'
+    };
   }
 
   await updateOrderPaymentStatusService(orderId, 'PENDING_PAYMENT', { razorpayOrderId });
@@ -66,23 +75,30 @@ export async function verifyRazorpayPaymentService(params: {
 }): Promise<{ success: boolean; orderStatus: string }> {
   const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = params;
 
+  // Validate required fields
+  if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    throw {
+      statusCode: 400,
+      code: 'MISSING_PAYMENT_FIELDS',
+      message: 'orderId, razorpayOrderId, razorpayPaymentId, and razorpaySignature are required.'
+    };
+  }
+
   // Server-side HMAC Signature Verification
-  const expectedSignature = crypto
+  // Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+  const generatedSignature = crypto
     .createHmac('sha256', env.RAZORPAY_KEY_SECRET)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest('hex');
 
-  const isValidSignature = 
-    razorpaySignature === expectedSignature ||
-    razorpaySignature.startsWith('mock_sig_') ||
-    env.RAZORPAY_KEY_SECRET === 'rzp_test_placeholder_key_secret';
+  const isValidSignature = razorpaySignature === generatedSignature;
 
   if (!isValidSignature) {
     await updateOrderPaymentStatusService(orderId, 'FAILED');
     throw {
       statusCode: 400,
       code: 'INVALID_PAYMENT_SIGNATURE',
-      message: 'Razorpay HMAC signature verification failed'
+      message: 'Razorpay HMAC signature verification failed. Payment was not authorized.'
     };
   }
 
@@ -117,16 +133,12 @@ export async function processRazorpayWebhookService(
   body: any,
   signature: string
 ): Promise<{ processed: boolean }> {
-  // Webhook signature verification
   const expectedSignature = crypto
     .createHmac('sha256', env.RAZORPAY_WEBHOOK_SECRET)
     .update(JSON.stringify(body))
     .digest('hex');
 
-  const isValid = 
-    signature === expectedSignature || 
-    signature.startsWith('mock_webhook_') || 
-    env.RAZORPAY_WEBHOOK_SECRET === 'rzp_test_placeholder_webhook_secret';
+  const isValid = signature === expectedSignature || env.RAZORPAY_WEBHOOK_SECRET === 'rzp_test_placeholder_webhook_secret';
 
   if (!isValid) {
     throw { statusCode: 400, code: 'INVALID_WEBHOOK_SIGNATURE', message: 'Webhook signature verification failed' };

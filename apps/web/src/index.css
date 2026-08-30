@@ -20,7 +20,23 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
 }
 
-/* Glassmorphism utility */
+/* ─── Custom Dark Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ─── Glassmorphism Utilities ─── */
 .glass-panel {
   background: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(12px);
@@ -31,16 +47,169 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(30, 41, 59, 0.6);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 8px 30px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
 }
 
+/* ─── Gradient Text ─── */
 .gradient-text {
   background: linear-gradient(135deg, #60a5fa 0%, #a855f7 50%, #ec4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* ─── Skeleton Loader ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* ─── Fade In Up Animation ─── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Staggered children animation delay */
+.stagger-children > * {
+  animation: fadeInUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.24s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.28s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.32s; }
+
+/* ─── Slide In From Right (mobile menu) ─── */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ─── Typing Indicator ─── */
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #a78bfa;
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─── Pulsing Glow ─── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* ─── Animated Gradient Banner ─── */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-gradient-bg {
+  background: linear-gradient(135deg, #0f172a, #1e1b4b, #172554, #0f172a);
+  background-size: 300% 300%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* ─── Confetti Burst (checkout success) ─── */
+@keyframes confettiFall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confettiFall 3s ease-in forwards;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ─── Counter Animate ─── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+/* ─── Message bubble entrance ─── */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-message-in {
+  animation: messageSlideIn 0.3s ease-out forwards;
+}
+
+/* ─── Product Image Hover Zoom ─── */
+.product-image-zoom {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.product-image-zoom:hover {
+  transform: scale(1.08);
 }

@@ -48,7 +48,7 @@ export function generate100Products(): Product[] {
       inventory: 25 + i * 2,
       rating: 4.5 + (i % 5) * 0.1,
       tags: [l.tag, 'laptop', 'developer', 'hardware'],
-      specifications: l.specs,
+      specifications: l.specs as unknown as Record<string, string>,
       compatibility: {
         compatibleProductIds: ['prod_hub_1', 'prod_bag_1', 'prod_mouse_1', 'prod_stand_1'],
         useCases: ['machine learning', 'data science', 'software engineering', 'gaming']

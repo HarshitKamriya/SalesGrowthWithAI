@@ -11,7 +11,8 @@ import {
   CheckCircle,
   CreditCard,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -20,20 +21,53 @@ interface ChatMessage {
   text: string;
   toolCalls?: any[];
   suggestions?: any;
+  timestamp: string;
 }
+
+// Simple markdown-like renderer for bold text and line breaks
+const RenderMarkdown: React.FC<{ text: string }> = ({ text }) => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
+// Typing indicator with bouncing dots
+const TypingIndicator: React.FC = () => (
+  <div className="flex items-start gap-3 animate-message-in">
+    <div className="h-8 w-8 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center shrink-0 mt-1">
+      <Bot className="h-4 w-4 text-purple-400" />
+    </div>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none px-5 py-4 flex items-center space-x-2">
+      <div className="typing-dot" />
+      <div className="typing-dot" />
+      <div className="typing-dot" />
+      <span className="text-xs text-slate-500 ml-2">AI reasoning over MongoDB & Neo4j RAG...</span>
+    </div>
+  </div>
+);
 
 export const Assistant: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'agent',
-      text: 'Hello! I am your AI Commerce Assistant powered by Gemini API, MongoDB, and Neo4j Graph + Vector RAG. What are you looking to buy today?'
+      text: 'Hello! I am your AI Commerce Assistant powered by Gemini API, MongoDB, and Neo4j Graph + Vector RAG. What are you looking to buy today?',
+      timestamp: new Date().toISOString()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToCart, refreshCart } = useCart();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const scrollToBottom = () => {
@@ -44,6 +78,11 @@ export const Assistant: React.FC = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  };
+
   const handleSendMessage = async (customText?: string) => {
     const textToSend = customText || inputMessage;
     if (!textToSend.trim() || isLoading) return;
@@ -51,7 +90,8 @@ export const Assistant: React.FC = () => {
     const userMsg: ChatMessage = {
       id: `usr_${Date.now()}`,
       sender: 'user',
-      text: textToSend
+      text: textToSend,
+      timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -74,7 +114,8 @@ export const Assistant: React.FC = () => {
           sender: 'agent',
           text: agentData.message,
           toolCalls: agentData.toolCalls,
-          suggestions: agentData.uiSuggestions
+          suggestions: agentData.uiSuggestions,
+          timestamp: new Date().toISOString()
         };
         setMessages(prev => [...prev, agentMsg]);
         await refreshCart();
@@ -85,11 +126,13 @@ export const Assistant: React.FC = () => {
         {
           id: `err_${Date.now()}`,
           sender: 'agent',
-          text: 'I parsed your intent over MongoDB structured products. Let me show you the top matched laptops.'
+          text: 'Sorry, I encountered an issue processing your request. Please try again or rephrase your query.',
+          timestamp: new Date().toISOString()
         }
       ]);
     } finally {
       setIsLoading(false);
+      inputRef.current?.focus();
     }
   };
 
@@ -102,10 +145,10 @@ export const Assistant: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
       
       {/* Header */}
-      <div className="flex items-center justify-between bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between bg-slate-900/80 p-4 rounded-xl border border-slate-800 animate-fade-in-up">
         <div className="flex items-center space-x-3">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center shadow-md">
-            <Sparkles className="h-5 w-5 text-white animate-pulse" />
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center shadow-md animate-pulse-glow">
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
             <h2 className="font-bold text-white text-base">AI Shopping & Growth Assistant</h2>
@@ -121,32 +164,28 @@ export const Assistant: React.FC = () => {
       </div>
 
       {/* Suggested Quick Prompt Chips */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-500 font-semibold shrink-0">Try Prompts:</span>
-        <button
-          onClick={() => handleSendMessage('Find me a laptop for machine learning under ₹80,000')}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 whitespace-nowrap transition-colors"
-        >
-          "Laptop for ML under ₹80k"
-        </button>
-        <button
-          onClick={() => handleSendMessage('Add ASUS TUF Gaming A15 to my cart and suggest accessories')}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 whitespace-nowrap transition-colors"
-        >
-          "Add laptop & suggest accessories"
-        </button>
-        <button
-          onClick={() => handleSendMessage('Proceed to checkout and create Razorpay order')}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 whitespace-nowrap transition-colors"
-        >
-          "Checkout & Pay"
-        </button>
+      <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <span className="text-slate-500 font-semibold shrink-0">Try:</span>
+        {[
+          { label: '"Laptop for ML under ₹80k"', msg: 'Find me a laptop for machine learning under ₹80,000' },
+          { label: '"Add laptop & suggest accessories"', msg: 'Add ASUS TUF Gaming A15 to my cart and suggest accessories' },
+          { label: '"Checkout & Pay"', msg: 'Proceed to checkout and create Razorpay order' },
+          { label: '"Compare laptops"', msg: 'Compare the top 2 laptops for programming and data science' }
+        ].map((chip) => (
+          <button
+            key={chip.label}
+            onClick={() => handleSendMessage(chip.msg)}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 whitespace-nowrap transition-all hover:border-purple-500/40 hover:text-purple-300"
+          >
+            {chip.label}
+          </button>
+        ))}
       </div>
 
       {/* Chat Messages Window */}
       <div className="glass-panel rounded-2xl p-4 sm:p-6 min-h-[500px] max-h-[650px] overflow-y-auto space-y-6 border border-slate-800 bg-slate-950/60">
         {messages.map((m) => (
-          <div key={m.id} className={`flex gap-3 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={m.id} className={`flex gap-3 ${m.sender === 'user' ? 'justify-end' : 'justify-start'} animate-message-in`}>
             
             {m.sender === 'agent' && (
               <div className="h-8 w-8 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center shrink-0 mt-1">
@@ -164,7 +203,13 @@ export const Assistant: React.FC = () => {
                     : 'bg-slate-900 text-slate-100 border border-slate-800 rounded-tl-none'
                 }`}
               >
-                {m.text}
+                <RenderMarkdown text={m.text} />
+              </div>
+
+              {/* Timestamp */}
+              <div className={`flex items-center space-x-1 text-[10px] text-slate-600 ${m.sender === 'user' ? 'justify-end' : ''}`}>
+                <Clock className="h-2.5 w-2.5" />
+                <span>{formatTime(m.timestamp)}</span>
               </div>
 
               {/* Tool Execution Badges */}
@@ -173,7 +218,7 @@ export const Assistant: React.FC = () => {
                   {m.toolCalls.map((tc, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-purple-400 px-2.5 py-1 rounded-md font-mono text-[11px]"
+                      className="inline-flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-purple-400 px-2.5 py-1 rounded-md font-mono text-[11px] animate-fade-in-up"
                     >
                       <Layers className="h-3 w-3 text-purple-400" />
                       <span>Tool: {tc.tool}()</span>
@@ -186,7 +231,7 @@ export const Assistant: React.FC = () => {
               {m.suggestions?.showProducts && m.suggestions.showProducts.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {m.suggestions.showProducts.slice(0, 2).map((p: any) => (
-                    <div key={p.productId} className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                    <div key={p.productId} className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 hover:border-blue-500/30 transition-colors">
                       <div className="flex justify-between items-start">
                         <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
                           {p.category}
@@ -199,7 +244,7 @@ export const Assistant: React.FC = () => {
                       </div>
                       <button
                         onClick={() => handleQuickAdd(p.productId)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-colors"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all hover:scale-[1.02]"
                       >
                         <ShoppingCart className="h-3.5 w-3.5" />
                         <span>Add to Cart</span>
@@ -227,7 +272,7 @@ export const Assistant: React.FC = () => {
                   </div>
                   <button
                     onClick={() => handleQuickAdd(m.suggestions.showUpsell.product.productId)}
-                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center space-x-1.5 shadow-lg shadow-purple-600/20 transition-all"
+                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center space-x-1.5 shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.02]"
                   >
                     <CheckCircle className="h-3.5 w-3.5" />
                     <span>Accept & Add Accessory (₹{m.suggestions.showUpsell.product.price.toLocaleString('en-IN')})</span>
@@ -248,7 +293,7 @@ export const Assistant: React.FC = () => {
                   </div>
                   <button
                     onClick={() => navigate('/checkout')}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-lg shadow-blue-600/25 transition-all"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.01]"
                   >
                     <CreditCard className="h-4 w-4" />
                     <span>Proceed to Explicit Razorpay Checkout</span>
@@ -268,12 +313,7 @@ export const Assistant: React.FC = () => {
           </div>
         ))}
 
-        {isLoading && (
-          <div className="flex items-center space-x-2 text-xs text-purple-400 animate-pulse">
-            <Bot className="h-4 w-4" />
-            <span>AI Reasoning over MongoDB & Neo4j vector RAG...</span>
-          </div>
-        )}
+        {isLoading && <TypingIndicator />}
 
         <div ref={messagesEndRef} />
       </div>
@@ -284,19 +324,21 @@ export const Assistant: React.FC = () => {
           e.preventDefault();
           handleSendMessage();
         }}
-        className="flex gap-2"
+        className="flex gap-2 animate-fade-in-up"
+        style={{ animationDelay: '0.15s' }}
       >
         <input
+          ref={inputRef}
           type="text"
           placeholder="Ask AI assistant for laptops, accessories, or cart guidance..."
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
-          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
         />
         <button
           type="submit"
           disabled={isLoading || !inputMessage.trim()}
-          className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center justify-center transition-colors"
+          className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center justify-center transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-600/20"
         >
           <Send className="h-4 w-4" />
         </button>

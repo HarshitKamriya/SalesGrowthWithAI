@@ -5,7 +5,7 @@ import { calculateUpsellOpportunitiesService } from '../services/upsellEngine.js
 import { createOrderService } from '../services/orderService.js';
 import { createRazorpayOrderService } from '../services/razorpayService.js';
 import { getMerchantAnalyticsService, createCampaignService } from '../services/merchantService.js';
-import { hybridProductSearchService } from '../rag/retrieval/hybridRetriever.ts';
+import { hybridProductSearchService } from '../rag/retrieval/hybridRetriever.js';
 
 export interface ToolDefinition {
   name: string;
@@ -164,8 +164,9 @@ export const agentTools: Record<string, ToolDefinition> = {
       budget: z.number(),
       estimatedRevenue: z.number()
     }),
-    execute: async (args) => {
+    execute: async (args, context) => {
       const campaign = await createCampaignService({
+        merchantId: context?.userId || 'merch_demo_1',
         title: args.title,
         description: args.description,
         targetSegment: args.targetSegment,

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { RegisterUserSchema, LoginUserSchema } from '@ai-commerce/shared';
 import { env } from '../config/env.js';
 import { getInMemoryStore, getMongoDb } from '../config/db.js';

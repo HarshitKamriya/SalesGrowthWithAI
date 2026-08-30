@@ -27,7 +27,7 @@ export async function getMerchantAnalyticsService(): Promise<MerchantAnalytics> 
   // Top Products
   const productSalesMap = new Map<string, { name: string; salesCount: number; revenue: number }>();
   completedOrders.forEach(o => {
-    o.items.forEach(i => {
+    o.items.forEach((i: { productId: string; name: string; quantity: number; price: number }) => {
       const existing = productSalesMap.get(i.productId) || { name: i.name, salesCount: 0, revenue: 0 };
       existing.salesCount += i.quantity;
       existing.revenue += i.price * i.quantity;

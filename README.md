@@ -1,65 +1,95 @@
 # AI Commerce + Growth Agent
 
-> **Razorpay Buildathon 2026 — Track 1: AI Growth & Agentic Commerce**  
-> An AI Revenue Agent that turns conversational shopping into measurable merchant growth.
+**Razorpay Buildathon 2026 — Track 1**
 
----
+AI Commerce + Growth Agent is a platform that helps customers find the right products and helps merchants increase revenue using AI.
 
-## 🌟 Architecture & Key Features
+## What it does
 
-### 1. Customer AI Shopping Assistant (`/assistant`)
-- **Conversational Product Discovery**: Structured intent extraction (budget limits, specifications, use cases).
-- **Hybrid Graph + Vector RAG**: MongoDB structured filtering combined with Neo4j vector similarity search and Cypher graph traversal.
-- **AI Upsell & Cross-Sell Engine**: Computes internal upsell score ($Upsell Score = Probability \times Compatibility \times Relevance \times Value$) to suggest accessories.
-- **Explicit Payment Confirmation**: Requires user review before triggering server-verified Razorpay Checkout.
+### Customer
+- Chat with an AI shopping assistant
+- Search and compare products
+- Get personalized recommendations
+- Get upsell and cross-sell suggestions
+- Add products to cart and pay using Razorpay
 
-### 2. Merchant AI Growth Copilot (`/merchant`)
-- **Real Metrics Dashboard**: Aggregates Total Revenue, AI-Assisted Revenue, AOV, AI-Assisted AOV, and Conversion Rates.
-- **Revenue Opportunity Discovery**: Automatically scans purchase history gaps (e.g. laptop buyers without accessories).
-- **Campaign Generator & Approval Workflow**: AI proposes targeted campaigns requiring explicit merchant approval before execution.
-- **Interactive Knowledge Graph Visualizer**: Renders Neo4j graph nodes and relationships.
-- **Audit Trail**: Logs all agent decisions, tool invocations, and reasoning.
+### Merchant
+- View sales and customer insights
+- Ask AI for ways to increase revenue
+- Find products that are often bought together
+- Find upsell and cross-sell opportunities
+- Generate and approve marketing campaigns
 
----
+## How AI works
 
-## 🛠️ Technology Stack
+We use **Hybrid RAG**, which combines information from MongoDB and Neo4j before giving it to the AI.
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, TanStack Query, Axios, Lucide Icons, Recharts.
-- **Backend**: Node.js, TypeScript, Express.js, Zod validation.
-- **Database**: MongoDB (Official Node.js Driver) — Primary transactional source of truth.
-- **Knowledge Graph + Vector RAG**: Neo4j (Bolt Driver) + Neo4j Vector Indexes.
-- **Cache & Temp Infrastructure**: Redis.
-- **Payments**: Razorpay Test Mode (Orders API, Checkout, HMAC signature verification, Webhooks).
-- **AI Engine**: Gemini API with provider abstraction & tool calling.
-
----
-
-## 🚀 Quick Start & Local Setup
-
-### 1. Install Dependencies
-```bash
-npm install
+```text
+User Query
+    ↓
+MongoDB + Neo4j
+    ↓
+Relevant Data
+    ↓
+RAG
+    ↓
+AI Agent
+    ↓
+Recommendation / Action
 ```
 
-### 2. Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
+Neo4j is used as a knowledge graph to understand relationships:
+
+```text
+Customer → PURCHASED → Laptop
+Laptop → FREQUENTLY_BOUGHT_WITH → USB-C Hub
+Laptop → SUITABLE_FOR → Machine Learning
 ```
 
-### 3. Run Development Server
-```bash
-npm run dev
-```
-- API Server: `http://localhost:5000`
-- Web Application: `http://localhost:3000`
+This helps the AI make recommendations based on real product and customer relationships.
 
-### 4. Run Tests
-```bash
-npm run test
+## Tech Stack
+
+- **React + TypeScript** — frontend
+- **Node.js + Express** — backend
+- **MongoDB** — main application database
+- **Neo4j** — knowledge graph and vector search
+- **Redis** — caching and temporary data
+- **LLM** — AI reasoning and responses
+- **RAG** — retrieves real business data for the AI
+- **Razorpay** — payments
+- **Docker** — local development and deployment
+
+## Main Flow
+
+```text
+Customer
+   ↓
+AI Shopping Agent
+   ↓
+Product Recommendation
+   ↓
+Upsell / Cross-sell
+   ↓
+Cart
+   ↓
+Razorpay Payment
+   ↓
+MongoDB
+   ↓
+Customer Events
+   ↓
+Neo4j Knowledge Graph
+   ↓
+Better Recommendations
+   ↓
+AI Growth Agent
+   ↓
+Merchant Revenue Opportunities
 ```
 
-### 5. Docker Orchestration
-```bash
-docker compose up --build
-```
+## Key Idea
+
+The project connects **AI, commerce, customer behavior, product relationships, payments, and merchant growth** in one system.
+
+MongoDB stores the main application data, while Neo4j helps the AI understand relationships and retrieve relevant information. The AI uses this information to give grounded recommendations and help merchants find new revenue opportunities.

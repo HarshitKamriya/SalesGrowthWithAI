@@ -9,7 +9,8 @@ import {
   Sparkles,
   ArrowUpRight,
   Send,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import {
   AreaChart,
@@ -23,20 +24,36 @@ import {
   Bar
 } from 'recharts';
 
+// Skeleton metric card for loading state
+const MetricSkeleton: React.FC = () => (
+  <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
+    <div className="flex justify-between items-center">
+      <div className="h-3 w-20 skeleton" />
+      <div className="h-4 w-4 skeleton rounded" />
+    </div>
+    <div className="h-8 w-32 skeleton" />
+    <div className="h-3 w-28 skeleton" />
+  </div>
+);
+
 export const MerchantDashboard: React.FC = () => {
   const [analytics, setAnalytics] = useState<MerchantAnalytics | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
   const [copilotPrompt, setCopilotPrompt] = useState('');
   const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
   const [isLoadingCopilot, setIsLoadingCopilot] = useState(false);
   const navigate = useNavigate();
 
   const fetchAnalytics = async () => {
+    setIsLoadingAnalytics(true);
     try {
       const res = await api.get('/merchant/analytics');
       if (res.data.success) {
         setAnalytics(res.data.data.analytics);
       }
-    } catch (err) {}
+    } catch (err) {} finally {
+      setIsLoadingAnalytics(false);
+    }
   };
 
   useEffect(() => {
@@ -70,11 +87,16 @@ export const MerchantDashboard: React.FC = () => {
     { name: 'Sun', Standard: 240000, AIAssisted: 210000 }
   ];
 
+  const formatCurrency = (val: number | undefined, fallback: string) => {
+    if (val !== undefined && val !== null) return `₹${val.toLocaleString('en-IN')}`;
+    return `₹${fallback}`;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
       
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 p-6 rounded-2xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 p-6 rounded-2xl border border-slate-800 animate-fade-in-up">
         <div>
           <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
             Merchant Revenue Intelligence
@@ -85,7 +107,7 @@ export const MerchantDashboard: React.FC = () => {
 
         <button
           onClick={() => navigate('/merchant/campaigns')}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/20 transition-all"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/20 transition-all hover:scale-[1.02]"
         >
           <TrendingUp className="h-4 w-4" />
           <span>Manage AI Campaigns</span>
@@ -93,67 +115,73 @@ export const MerchantDashboard: React.FC = () => {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
-            <span>Total Revenue</span>
-            <DollarSign className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-white">
-            ₹{analytics?.totalRevenue?.toLocaleString('en-IN') || '1,24,50,000'}
-          </div>
-          <span className="text-xs text-emerald-400 font-semibold flex items-center">
-            <ArrowUpRight className="h-3.5 w-3.5 mr-1" /> +18.4% vs last period
-          </span>
+      {isLoadingAnalytics ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {Array.from({ length: 4 }).map((_, i) => <MetricSkeleton key={i} />)}
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger-children">
+          
+          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
+              <span>Total Revenue</span>
+              <DollarSign className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-extrabold text-white animate-count">
+              {formatCurrency(analytics?.totalRevenue, '1,24,50,000')}
+            </div>
+            <span className="text-xs text-emerald-400 font-semibold flex items-center">
+              <ArrowUpRight className="h-3.5 w-3.5 mr-1" /> +18.4% vs last period
+            </span>
+          </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-purple-500/30 bg-purple-950/10 space-y-2">
-          <div className="flex justify-between items-center text-purple-400 text-xs font-semibold">
-            <span>AI-Assisted Revenue</span>
-            <Sparkles className="h-4 w-4 text-purple-400" />
+          <div className="glass-panel p-5 rounded-2xl border border-purple-500/30 bg-purple-950/10 space-y-2">
+            <div className="flex justify-between items-center text-purple-400 text-xs font-semibold">
+              <span>AI-Assisted Revenue</span>
+              <Sparkles className="h-4 w-4 text-purple-400" />
+            </div>
+            <div className="text-2xl font-extrabold text-white animate-count">
+              {formatCurrency(analytics?.aiAssistedRevenue, '42,80,000')}
+            </div>
+            <span className="text-xs text-purple-400 font-semibold">
+              34.3% of total revenue driven by AI
+            </span>
           </div>
-          <div className="text-2xl font-extrabold text-white">
-            ₹{analytics?.aiAssistedRevenue?.toLocaleString('en-IN') || '42,80,000'}
+
+          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
+              <span>Average Order Value (AOV)</span>
+              <ShoppingBag className="h-4 w-4 text-blue-400" />
+            </div>
+            <div className="text-2xl font-extrabold text-white animate-count">
+              {formatCurrency(analytics?.averageOrderValue, '78,400')}
+            </div>
+            <span className="text-xs text-blue-400 font-semibold">
+              AI-Assisted AOV: {formatCurrency(analytics?.aiAssistedAOV, '92,100')}
+            </span>
           </div>
-          <span className="text-xs text-purple-400 font-semibold">
-            34.3% of total revenue drive by AI
-          </span>
+
+          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
+              <span>Upsell Conversion Rate</span>
+              <Zap className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-extrabold text-white animate-count">
+              {((analytics?.upsellConversionRate || 0.34) * 100).toFixed(1)}%
+            </div>
+            <span className="text-xs text-amber-400 font-semibold">
+              Cross-Sell Rev: {formatCurrency(analytics?.crossSellRevenue, '18,50,000')}
+            </span>
+          </div>
+
         </div>
-
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
-            <span>Average Order Value (AOV)</span>
-            <ShoppingBag className="h-4 w-4 text-blue-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-white">
-            ₹{analytics?.averageOrderValue?.toLocaleString('en-IN') || '78,400'}
-          </div>
-          <span className="text-xs text-blue-400 font-semibold">
-            AI-Assisted AOV: ₹{analytics?.aiAssistedAOV?.toLocaleString('en-IN') || '92,100'}
-          </span>
-        </div>
-
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-semibold">
-            <span>Upsell Conversion Rate</span>
-            <Zap className="h-4 w-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-white">
-            {((analytics?.upsellConversionRate || 0.34) * 100).toFixed(1)}%
-          </div>
-          <span className="text-xs text-amber-400 font-semibold">
-            Cross-Sell Rev: ₹{analytics?.crossSellRevenue?.toLocaleString('en-IN') || '18,50,000'}
-          </span>
-        </div>
-
-      </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Revenue Trend Area Chart */}
-        <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+        <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-white text-base">Weekly Revenue Breakdown (Standard vs AI-Assisted)</h3>
             <span className="text-xs text-slate-400 font-mono">Live DB Aggregation</span>
@@ -162,9 +190,12 @@ export const MerchantDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#64748b" />
-                <YAxis stroke="#64748b" />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                  labelStyle={{ color: '#94a3b8' }}
+                />
                 <Area type="monotone" dataKey="Standard" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
                 <Area type="monotone" dataKey="AIAssisted" stackId="1" stroke="#a855f7" fill="#a855f7" fillOpacity={0.6} />
               </AreaChart>
@@ -173,7 +204,7 @@ export const MerchantDashboard: React.FC = () => {
         </div>
 
         {/* AI Copilot Prompt Card */}
-        <div className="glass-panel p-6 rounded-2xl border border-indigo-500/30 bg-slate-900/90 space-y-4 flex flex-col justify-between">
+        <div className="glass-panel p-6 rounded-2xl border border-indigo-500/30 bg-slate-900/90 space-y-4 flex flex-col justify-between animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
           <div className="space-y-3">
             <div className="flex items-center space-x-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
               <Sparkles className="h-4 w-4" />
@@ -186,13 +217,20 @@ export const MerchantDashboard: React.FC = () => {
 
             <button
               onClick={() => handleAskCopilot('How can I increase revenue?')}
-              className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2 px-3 rounded-lg text-left transition-colors"
+              className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2 px-3 rounded-lg text-left transition-all hover:border-indigo-500/40"
             >
               💡 "How can I increase revenue?"
             </button>
 
-            {copilotResponse && (
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-indigo-500/30 text-xs text-slate-200 leading-relaxed">
+            {isLoadingCopilot && (
+              <div className="flex items-center space-x-2 text-indigo-400 text-xs py-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Analyzing sales data...</span>
+              </div>
+            )}
+
+            {copilotResponse && !isLoadingCopilot && (
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-indigo-500/30 text-xs text-slate-200 leading-relaxed animate-fade-in-up">
                 {copilotResponse}
               </div>
             )}
@@ -210,12 +248,12 @@ export const MerchantDashboard: React.FC = () => {
               placeholder="Ask copilot..."
               value={copilotPrompt}
               onChange={(e) => setCopilotPrompt(e.target.value)}
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
             <button
               type="submit"
               disabled={isLoadingCopilot || !copilotPrompt.trim()}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg font-bold text-xs"
+              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-2 rounded-lg font-bold text-xs transition-all"
             >
               <Send className="h-3.5 w-3.5" />
             </button>
@@ -225,31 +263,37 @@ export const MerchantDashboard: React.FC = () => {
       </div>
 
       {/* Revenue Opportunities List */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
         <h3 className="font-bold text-white text-base">Discovered Revenue Opportunities</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {analytics?.revenueOpportunities.map((opp) => (
-            <div key={opp.id} className="glass-card rounded-xl p-4 space-y-3">
-              <div className="flex justify-between items-start">
-                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                  {opp.targetSegment}
-                </span>
-                <span className="text-sm font-extrabold text-emerald-400">
-                  +₹{(opp.estimatedRevenue / 100000).toFixed(1)} Lakhs
-                </span>
+        {analytics?.revenueOpportunities && analytics.revenueOpportunities.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+            {analytics.revenueOpportunities.map((opp) => (
+              <div key={opp.id} className="glass-card rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                    {opp.targetSegment}
+                  </span>
+                  <span className="text-sm font-extrabold text-emerald-400">
+                    +₹{(opp.estimatedRevenue / 100000).toFixed(1)} Lakhs
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">{opp.title}</h4>
+                <p className="text-xs text-slate-400">{opp.description}</p>
+                <button
+                  onClick={() => navigate('/merchant/campaigns')}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg transition-all flex items-center justify-center space-x-1 hover:scale-[1.02]"
+                >
+                  <span>Generate & Review Campaign</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <h4 className="font-bold text-white text-sm">{opp.title}</h4>
-              <p className="text-xs text-slate-400">{opp.description}</p>
-              <button
-                onClick={() => navigate('/merchant/campaigns')}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg transition-colors flex items-center justify-center space-x-1"
-              >
-                <span>Generate & Review Campaign</span>
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : !isLoadingAnalytics ? (
+          <div className="text-center py-8 text-slate-500 text-xs">
+            No revenue opportunities discovered yet. Process some orders to generate AI-powered insights.
+          </div>
+        ) : null}
       </div>
 
     </div>
